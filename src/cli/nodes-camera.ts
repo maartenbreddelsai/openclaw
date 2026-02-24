@@ -1,12 +1,11 @@
 import * as fs from "node:fs/promises";
-import * as path from "node:path";
 import { resolveCliName } from "./cli-name.js";
 import {
   asBoolean,
   asNumber,
   asRecord,
   asString,
-  resolveTempPathParts,
+  nodeTempPath,
 } from "./nodes-media-utils.js";
 
 const MAX_CAMERA_URL_DOWNLOAD_BYTES = 250 * 1024 * 1024;
@@ -62,14 +61,14 @@ export function cameraTempPath(opts: {
   tmpDir?: string;
   id?: string;
 }) {
-  const { tmpDir, id, ext } = resolveTempPathParts({
+  return nodeTempPath({
+    kind: `camera-${opts.kind}`,
+    suffix: opts.facing,
+    prefix: resolveCliName(),
+    ext: opts.ext,
     tmpDir: opts.tmpDir,
     id: opts.id,
-    ext: opts.ext,
   });
-  const facingPart = opts.facing ? `-${opts.facing}` : "";
-  const cliName = resolveCliName();
-  return path.join(tmpDir, `${cliName}-camera-${opts.kind}${facingPart}-${id}${ext}`);
 }
 
 export async function writeUrlToFile(filePath: string, url: string) {

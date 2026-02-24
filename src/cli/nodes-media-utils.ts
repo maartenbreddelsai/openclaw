@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
+import * as path from "node:path";
 import { resolvePreferredOpenClawTmpDir } from "../infra/tmp-openclaw-dir.js";
 
 export function asRecord(value: unknown): Record<string, unknown> {
@@ -32,4 +33,25 @@ export function resolveTempPathParts(opts: { ext: string; tmpDir?: string; id?: 
     id: opts.id ?? randomUUID(),
     ext: opts.ext.startsWith(".") ? opts.ext : `.${opts.ext}`,
   };
+}
+
+/**
+ * Generate a temp file path for node actions (invoke, screen-record, camera, etc.)
+ * @param kind - Action kind (e.g., "invoke", "screen-record", "camera-snap")
+ * @param ext - File extension (e.g., "json", "mp4")
+ * @param suffix - Optional suffix (e.g., "front" for camera facing)
+ * @param prefix - Optional prefix, defaults to "openclaw"
+ */
+export function nodeTempPath(opts: {
+  kind: string;
+  ext: string;
+  suffix?: string;
+  prefix?: string;
+  tmpDir?: string;
+  id?: string;
+}): string {
+  const { tmpDir, id, ext } = resolveTempPathParts(opts);
+  const prefix = opts.prefix ?? "openclaw";
+  const suffix = opts.suffix ? `-${opts.suffix}` : "";
+  return path.join(tmpDir, `${prefix}-${opts.kind}${suffix}-${id}${ext}`);
 }

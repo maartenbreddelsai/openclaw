@@ -1,6 +1,5 @@
-import * as path from "node:path";
 import { writeBase64ToFile } from "./nodes-camera.js";
-import { asRecord, asString, resolveTempPathParts } from "./nodes-media-utils.js";
+import { asRecord, asString, nodeTempPath } from "./nodes-media-utils.js";
 
 export type ScreenRecordPayload = {
   format: string;
@@ -29,8 +28,7 @@ export function parseScreenRecordPayload(value: unknown): ScreenRecordPayload {
 }
 
 export function screenRecordTempPath(opts: { ext: string; tmpDir?: string; id?: string }) {
-  const { tmpDir, id, ext } = resolveTempPathParts(opts);
-  return path.join(tmpDir, `openclaw-screen-record-${id}${ext}`);
+  return nodeTempPath({ kind: "screen-record", ...opts });
 }
 
 export async function writeScreenRecordToFile(filePath: string, base64: string) {

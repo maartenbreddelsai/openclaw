@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import fs from "node:fs/promises";
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import {
@@ -16,6 +17,7 @@ import {
   screenRecordTempPath,
   writeScreenRecordToFile,
 } from "../../cli/nodes-screen.js";
+import { nodeTempPath } from "../../cli/nodes-media-utils.js";
 import { parseDurationMs } from "../../cli/parse-duration.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import { imageMimeFromFormat } from "../../media/mime.js";
@@ -87,10 +89,15 @@ const NodesToolSchema = Type.Object({
   duration: Type.Optional(Type.String()),
   durationMs: Type.Optional(Type.Number()),
   includeAudio: Type.Optional(Type.Boolean()),
-  // screen_record
+  // screen_record / invoke output
   fps: Type.Optional(Type.Number()),
   screenIndex: Type.Optional(Type.Number()),
-  outPath: Type.Optional(Type.String()),
+  outPath: Type.Optional(
+    Type.String({
+      description:
+        "Write output to file instead of returning in context. For screen_record: video path. For invoke: JSON file path (reduces token usage for large payloads).",
+    }),
+  ),
   // location_get
   maxAgeMs: Type.Optional(Type.Number()),
   locationTimeoutMs: Type.Optional(Type.Number()),
@@ -546,6 +553,25 @@ export function createNodesTool(options?: {
               timeoutMs: invokeTimeoutMs,
               idempotencyKey: crypto.randomUUID(),
             });
+
+            // If outPath is provided, write result to file instead of returning in context
+            const outPath =
+              typeof params.outPath === "string" && params.outPath.trim()
+                ? params.outPath.trim()
+                : undefined;
+            if (outPath) {
+              const filePath = outPath.endsWith(".json") ? outPath : nodeTempPath({ kind: "invoke", ext: "json" });
+              const content = JSON.stringify(raw ?? {}, null, 2);
+              await fs.writeFile(filePath, content, "utf8");
+              return {
+                content: [{ type: "text", text: `FILE:${filePath}` }],
+                details: {
+                  path: filePath,
+                  bytes: Buffer.byteLength(content, "utf8"),
+                  command: invokeCommand,
+                },
+              };
+            }
             return jsonResult(raw ?? {});
           }
           default:
